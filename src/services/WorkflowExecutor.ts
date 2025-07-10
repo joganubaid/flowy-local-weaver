@@ -82,6 +82,18 @@ export class WorkflowExecutor {
         case 'notify':
           result = await this.executeNotifyNode(node, inputData);
           break;
+        case 'loop':
+          result = await this.executeLoopNode(node, inputData, workflow);
+          break;
+        case 'switch':
+          result = await this.executeSwitchNode(node, inputData);
+          break;
+        case 'trigger':
+          result = await this.executeTriggerNode(node, inputData);
+          break;
+        case 'integration':
+          result = await this.executeIntegrationNode(node, inputData);
+          break;
         default:
           throw new Error(`Unknown node type: ${node.type}`);
       }
@@ -274,5 +286,122 @@ export class WorkflowExecutor {
 
   private getNestedValue(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => current?.[key], obj);
+  }
+
+  private async executeLoopNode(node: any, inputData: any, workflow: ExecutionContext): Promise<any> {
+    const config = node.data.config;
+    const results = [];
+    
+    switch (config.loopType) {
+      case 'array':
+        const arrayData = this.getNestedValue(inputData, config.arrayPath || 'data');
+        if (Array.isArray(arrayData)) {
+          for (let i = 0; i < arrayData.length; i++) {
+            const itemData = { ...inputData, item: arrayData[i], index: i };
+            results.push(itemData);
+            // Execute loop body nodes here (would need more complex edge handling)
+          }
+        }
+        break;
+      
+      case 'count':
+        for (let i = 0; i < (config.count || 0); i++) {
+          const itemData = { ...inputData, index: i, count: config.count };
+          results.push(itemData);
+        }
+        break;
+        
+      case 'while':
+        let iterations = 0;
+        const maxIterations = 100; // Safety limit
+        while (iterations < maxIterations) {
+          try {
+            const evaluateCondition = new Function('data', `return Boolean(${config.condition})`);
+            if (!evaluateCondition(inputData)) break;
+            
+            results.push({ ...inputData, iteration: iterations });
+            iterations++;
+          } catch {
+            break;
+          }
+        }
+        break;
+    }
+    
+    return {
+      loopType: config.loopType,
+      iterations: results.length,
+      results: results
+    };
+  }
+
+  private async executeSwitchNode(node: any, inputData: any): Promise<any> {
+    const config = node.data.config;
+    const inputValue = this.getNestedValue(inputData, config.inputPath);
+    
+    for (const switchCase of config.cases) {
+      try {
+        const evaluateCondition = new Function('value', `return value ${switchCase.condition}`);
+        if (evaluateCondition(inputValue)) {
+          return {
+            matched: true,
+            case: switchCase,
+            output: switchCase.output,
+            inputValue
+          };
+        }
+      } catch (error) {
+        console.warn(`Switch condition evaluation failed: ${error}`);
+      }
+    }
+    
+    return {
+      matched: false,
+      output: config.defaultOutput || null,
+      inputValue
+    };
+  }
+
+  private async executeTriggerNode(node: any, inputData: any): Promise<any> {
+    const config = node.data.config;
+    
+    return {
+      trigger: {
+        type: config.triggerType,
+        triggeredAt: new Date().toISOString(),
+        ...(config.schedule && { schedule: config.schedule }),
+        ...(config.webhookPath && { webhookPath: config.webhookPath }),
+        ...(config.eventType && { eventType: config.eventType })
+      },
+      data: inputData || { triggered: true }
+    };
+  }
+
+  private async executeIntegrationNode(node: any, inputData: any): Promise<any> {
+    const config = node.data.config;
+    
+    // This is a mock implementation - in reality, this would connect to actual services
+    console.log(`Integration: ${config.service} - ${config.action}`);
+    
+    const mockResponses: Record<string, any> = {
+      'slack-send-message': { messageId: 'msg_123', channel: '#general', sent: true },
+      'google-sheets-append-row': { rowId: 42, spreadsheetId: 'sheet_123', success: true },
+      'notion-create-page': { pageId: 'page_123', title: 'New Page', created: true },
+      'gmail-send-email': { messageId: 'email_123', to: 'user@example.com', sent: true },
+      'telegram-send-message': { messageId: 456, chatId: '123', sent: true }
+    };
+    
+    const mockKey = `${config.service}-${config.action}`;
+    const mockResponse = mockResponses[mockKey] || { success: true, action: config.action };
+    
+    return {
+      integration: {
+        service: config.service,
+        action: config.action,
+        parameters: config.parameters
+      },
+      response: mockResponse,
+      inputData
+    };
   }
 }

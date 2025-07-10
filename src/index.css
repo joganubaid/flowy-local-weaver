@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Workflow Node Colors */
+.workflow-node {
+  @apply border-2 border-border/20 bg-card text-card-foreground shadow-lg rounded-lg;
+}
+
+.workflow-node--http { @apply border-blue-200 bg-blue-50; }
+.workflow-node--function { @apply border-green-200 bg-green-50; }
+.workflow-node--if { @apply border-yellow-200 bg-yellow-50; }
+.workflow-node--delay { @apply border-purple-200 bg-purple-50; }
+.workflow-node--webhook { @apply border-orange-200 bg-orange-50; }
+.workflow-node--notify { @apply border-pink-200 bg-pink-50; }
+.workflow-node--loop { @apply border-cyan-200 bg-cyan-50; }
+.workflow-node--switch { @apply border-amber-200 bg-amber-50; }
+.workflow-node--trigger { @apply border-primary/20 bg-primary/5; }
+.workflow-node--integration { @apply border-indigo-200 bg-indigo-50; }
+
+.workflow-handle {
+  @apply w-3 h-3 border-2 border-background;
+}
+
+.workflow-handle.target { @apply bg-red-400; }
+.workflow-handle.source { @apply bg-green-400; }
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

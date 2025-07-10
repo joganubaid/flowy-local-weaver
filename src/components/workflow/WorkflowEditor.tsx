@@ -24,6 +24,11 @@ import { FunctionNode } from './nodes/FunctionNode';
 import { DelayNode } from './nodes/DelayNode';
 import { WebhookNode } from './nodes/WebhookNode';
 import { NotifyNode } from './nodes/NotifyNode';
+import { LoopNode } from './nodes/LoopNode';
+import { SwitchNode } from './nodes/SwitchNode';
+import { TriggerNode } from './nodes/TriggerNode';
+import { IntegrationNode } from './nodes/IntegrationNode';
+import { WorkflowExecutionLogs } from './WorkflowExecutionLogs';
 import { NodePalette } from './NodePalette';
 import { WorkflowExecutor } from '../../services/WorkflowExecutor';
 
@@ -34,6 +39,10 @@ const nodeTypes = {
   delay: DelayNode,
   webhook: WebhookNode,
   notify: NotifyNode,
+  loop: LoopNode,
+  switch: SwitchNode,
+  trigger: TriggerNode,
+  integration: IntegrationNode,
 };
 
 const initialNodes: Node[] = [];
@@ -48,6 +57,7 @@ export const WorkflowEditor = ({ workflowId, onSave }: WorkflowEditorProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
   
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -81,6 +91,14 @@ export const WorkflowEditor = ({ workflowId, onSave }: WorkflowEditorProps) => {
         return { path: '/webhook', method: 'POST' };
       case 'notify':
         return { title: 'Notification', message: 'Workflow step completed', type: 'info' };
+      case 'loop':
+        return { loopType: 'array', arrayPath: 'data.items', count: 5 };
+      case 'switch':
+        return { inputPath: 'data.type', cases: [], defaultOutput: 'No match' };
+      case 'trigger':
+        return { triggerType: 'manual' };
+      case 'integration':
+        return { service: 'slack', action: 'send-message', credentials: {}, parameters: {} };
       default:
         return {};
     }
@@ -128,14 +146,44 @@ export const WorkflowEditor = ({ workflowId, onSave }: WorkflowEditorProps) => {
       return;
     }
 
-    setIsExecuting(true);
+      setIsExecuting(true);
     try {
       const executor = new WorkflowExecutor();
       const result = await executor.execute({ nodes, edges });
       
+      // Save execution log
+      const execution = {
+        id: `exec-${Date.now()}`,
+        workflowId: workflowId || 'temp-workflow',
+        status: 'completed' as const,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        duration: Date.now() - Date.now(), // This would be calculated properly
+        nodeResults: result.nodeResults,
+      };
+      
+      const executions = JSON.parse(localStorage.getItem('workflow-executions') || '[]');
+      executions.unshift(execution);
+      localStorage.setItem('workflow-executions', JSON.stringify(executions.slice(0, 50))); // Keep last 50
+      
       toast.success('Workflow executed successfully!');
       console.log('Execution result:', result);
     } catch (error) {
+      // Save failed execution log
+      const execution = {
+        id: `exec-${Date.now()}`,
+        workflowId: workflowId || 'temp-workflow',
+        status: 'failed' as const,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        nodeResults: {},
+      };
+      
+      const executions = JSON.parse(localStorage.getItem('workflow-executions') || '[]');
+      executions.unshift(execution);
+      localStorage.setItem('workflow-executions', JSON.stringify(executions.slice(0, 50)));
+      
       toast.error(`Workflow execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       console.error('Execution error:', error);
     } finally {
@@ -151,6 +199,13 @@ export const WorkflowEditor = ({ workflowId, onSave }: WorkflowEditorProps) => {
           Workflow Editor
         </h1>
         <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowLogs(!showLogs)} 
+            variant="outline" 
+            size="sm"
+          >
+            Logs
+          </Button>
           <Button onClick={saveWorkflow} variant="outline" size="sm">
             <Save className="w-4 h-4 mr-2" />
             Save
@@ -193,6 +248,18 @@ export const WorkflowEditor = ({ workflowId, onSave }: WorkflowEditorProps) => {
             <MiniMap />
           </ReactFlow>
         </div>
+
+        {/* Execution Logs Panel */}
+        {showLogs && (
+          <Card className="w-80 m-4 flex-shrink-0">
+            <WorkflowExecutionLogs 
+              workflowId={workflowId}
+              onRerun={executeWorkflow}
+              onResume={() => console.log('Resume execution')}
+              onPause={() => console.log('Pause execution')}
+            />
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 export interface WorkflowNode {
   id: string;
-  type: 'http' | 'if' | 'function' | 'delay' | 'webhook' | 'notify';
+  type: 'http' | 'if' | 'function' | 'delay' | 'webhook' | 'notify' | 'loop' | 'switch' | 'trigger' | 'integration';
   position: { x: number; y: number };
   data: any;
 }
@@ -72,4 +72,35 @@ export interface NotifyNodeConfig {
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
+}
+
+export interface LoopNodeConfig {
+  loopType: 'array' | 'count' | 'while';
+  arrayPath?: string;
+  count?: number;
+  condition?: string;
+}
+
+export interface SwitchNodeConfig {
+  inputPath: string;
+  cases: Array<{
+    id: string;
+    condition: string;
+    output: string;
+  }>;
+  defaultOutput?: string;
+}
+
+export interface TriggerNodeConfig {
+  triggerType: 'manual' | 'schedule' | 'webhook' | 'event';
+  schedule?: string;
+  webhookPath?: string;
+  eventType?: string;
+}
+
+export interface IntegrationNodeConfig {
+  service: string;
+  action: string;
+  credentials?: Record<string, string>;
+  parameters?: Record<string, any>;
 }
