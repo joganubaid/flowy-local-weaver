@@ -14,7 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_credentials: {
+        Row: {
+          created_at: string
+          encrypted_data: string
+          id: string
+          name: string
+          service: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          encrypted_data: string
+          id?: string
+          name: string
+          service: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          encrypted_data?: string
+          id?: string
+          name?: string
+          service?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      workflow_executions: {
+        Row: {
+          error_message: string | null
+          execution_data: Json | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          user_id: string | null
+          workflow_id: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          execution_data?: Json | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status: string
+          user_id?: string | null
+          workflow_id?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          execution_data?: Json | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          user_id?: string | null
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_executions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          workflow_data: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          workflow_data: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          workflow_data?: Json
+        }
+        Relationships: []
+      }
+      workflows: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+          user_id: string | null
+          workflow_data: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+          user_id?: string | null
+          workflow_data: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+          workflow_data?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
